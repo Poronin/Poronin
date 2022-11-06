@@ -1,0 +1,1196 @@
+---
+title: 'Minería de datos: PRA1 & PRA2 Selección y preparación de un juego de datos'
+author: "Autor: Leonardo Segovia Vilchez"
+date: "Abril 2020"
+output:
+  html_document:
+    highlight: default
+    number_sections: yes
+    theme: cosmo    
+    toc: yes
+    toc_depth: 2
+    includes:
+      in_header: 75.584-PRA1.header.html
+  word_document: default
+  pdf_document:
+    highlight: zenburn
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+******
+# Introducción
+******
+## Presentación
+Esta práctica cubre de forma transversal la asignatura.
+
+Las Prácticas 1 y 2 de la asignatura se plantean de una forma conjunta de modo que la Práctica 2 será continuación de la 1.
+
+El objetivo global de las dos prácticas consiste en seleccionar uno o varios juegos de datos, realizar las tareas de **preparación y análisis exploratorio** con el objetivo de disponer de datos listos para **aplicar algoritmos** de clustering, asociación y clasificación.
+
+## Competencias
+Las competencias que se trabajan en esta prueba son:  
+
+* Uso y aplicación de las TIC en el ámbito académico y profesional.
+* Capacidad para innovar y generar nuevas ideas.
+* Capacidad para evaluar soluciones tecnológicas y elaborar propuestas de proyectos teniendo en cuenta los recursos, las alternativas disponibles y las condiciones de mercado.
+* Conocer las tecnologías de comunicaciones actuales y emergentes así como saberlas aplicar convenientemente para diseñar y desarrollar soluciones basadas en sistemas y tecnologías de la información.
+* Aplicación de las técnicas específicas de ingeniería del software en las diferentes etapas del ciclo de vida de un proyecto.
+* Capacidad para aplicar las técnicas específicas de tratamiento, almacenamiento y administración de datos.
+* Capacidad para proponer y evaluar diferentes alternativas tecnológicas para resolver un problema concreto.
+
+## Objetivos
+La correcta asimilación de todos los aspectos trabajados durante el semestre.  
+En esta práctica abordamos un caso real de minería de datos donde tenemos que poner en juego todos los conceptos trabajados.
+Hay que trabajar todo el ciclo de vida del proyecto. Desde el objetivo del proyecto hasta la implementación del conocimiento encontrado pasando por la preparación, limpieza de los datos, conocimiento de los datos, generación del modelo, interpretación y evaluación.
+
+## Descripción de la PRA a realizar
+
+## Recursos Básicos
+Material docente proporcionado por la UOC. 
+
+## Criterios de valoración
+
+**Ejercicios prácticos** 
+
+Para todas las PEC es **necesario documentar** en cada apartado del ejercicio práctico que se ha hecho y como se ha hecho.
+
+## Formato y fecha de entrega PRA_1
+El formato de entrega es: usernameestudiant-PRA1.html y RMD  
+Fecha de entrega: 06/05/2020  
+Se debe entregar la PRA_1 en el buzón de entregas del aula  
+
+## Nota: Propiedad intelectual 
+
+> A menudo es inevitable, al producir una obra multimedia, hacer uso de recursos creados por terceras personas. Es por lo tanto comprensible hacerlo en el marco de una práctica de los estudios de Informática, Multimedia y Telecomunicación de la UOC, siempre y cuando esto se documente claramente y no suponga plagio en la práctica. 
+
+> Por lo tanto, al presentar una práctica que haga uso de recursos ajenos, se debe presentar junto con ella un documento en que se detallen todos ellos, especificando el nombre de cada recurso, su autor, el lugar donde se obtuvo y su estatus legal: si la obra esta protegida por el copyright o se acoge a alguna otra licencia de uso (Creative Commons, licencia GNU, GPL ...). 
+El estudiante deberá asegurarse de que la licencia no impide específicamente su uso en el marco de la práctica. En caso de no encontrar la información correspondiente tendrá que asumir que la obra esta protegida por copyright. 
+
+> Deberéis, además, adjuntar los ficheros originales cuando las obras utilizadas sean digitales, y su código fuente si corresponde.  
+
+******
+# Enunciado
+******
+Todo estudio de minería debe nacer de una necesidad de alcanzar un objetivo que nos marcamos y que sólo podremos obtener a través de una colección de buenas prácticas basadas en la Minería de Datos.
+
+El mundo de la minería de datos hemos de contemplar 3 ejes:  
+
+1. Uno de ellos es el profundo **conocimiento** que deberíamos tener **del ámbito de los datos que estamos tratando** al que intentamos dar respuestas. 
+
+2. El otro gran eje es sin duda las **capacidades analíticas** que seamos capaces de desplegar y en este sentido, las dos prácticas de esta asignatura pretenden que el estudiante realice un recorrido sólido por este segundo eje.  
+
+3. El tercer eje son los **Datos**. Llegar al objetivo debe concretarse con preguntas analíticas que a su vez sean viables responder a partir de los datos de que disponemos. La tarea de analizar los datos es sin duda importante, pero la tarea de identificarlos y obtenerlos es para un analista un reto permanente.  
+
+Como **primera parte** del estudio analítico que nos disponemos a realizar, se pide al estudiante que complete los siguientes pasos:   
+
+1.Seleccionar un juego de datos y justificar su elección. El juego de datos deberá tener capacidades para que se le puedan aplicar algoritmos supervisados, algoritmos no supervisados y reglas de asociación. Si el juego de datos no soporta los tres modelos se pueden elegir varios conjuntos de datos, derivar datos nuevos o fusionarlos con otros.  
+
+2. Realizar un análisis exploratorio del juego de datos seleccionado.   
+
+3. Realizar las tareas de limpieza y acondicionado necesarias para poder ser usado en procesos de creación de modelos de minería posteriores.
+
+4. Realizar métodos de discretización
+
+5. Aplicar un estudio PCA sobre el juego de datos. A pesar de no estar explicado en el material didáctico, se valorará si en lugar de PCA investigáis por vuestra cuenta y aplicáis SVD (Single Value Decomposition).
+
+******
+# Práctica 1 - Leonardo Segovia vilchez
+******
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Paquetes y librerías..
+#install.packages('dendextend')
+#install.packages("tidyr")
+#install_github("vqv/ggbiplot")
+library(tidyr)
+library(tibble)
+library(dplyr)
+library(ggplot2)
+library(arules)
+library(purrr)
+library(dendextend)
+library(scales)
+library(tidyr)
+
+```
+
+Procedemos a cargar el dataset y echamos un primer vistazo a su estructura. Comprobamos que los datos se han cargado correctamente y que todas las columnans tiene el nombre correcto asignado. 
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Cargamos el juego de datos
+travelRawData<- read.csv("https://archive.ics.uci.edu/ml/machine-learning-databases/00484/tripadvisor_review.csv", header=T, sep=",")
+
+# Nombres de los atributos
+names(travelRawData) <- c("userId", "artGalleries", "danceClubs", "juiceBars", "restaurants", "museums", "resorts", "parksAndpicnic", "beaches", "theaters", "religiousInstitutions")
+
+# Eliminamos la columna del usuario ya que equivale al index de la tabla.
+travelData <- travelRawData[,2:11]
+
+# Añadimos la base de datos a la "search path" de R.
+attach(travelData)
+
+# Mostramos las cabecera para comprobar el dataset.
+head(travelData, 5)
+
+# Verificamos la estructura del dataset.
+str(travelData)
+```
+
+Información del dataset seleccionado:
+
+This data set is populated by crawling TripAdvisor.com. Reviews on destinations in 10 categories mentioned across East Asia are considered. 
+Each traveler rating is mapped as Excellent (4), Very Good (3), Average (2), Poor (1), and Terrible (0) and average rating is used against each category per user.
+
+Attribute Information:
+
+Attribute 1 : Unique user id
+
+Attribute 2 : Average user feedback on art galleries
+Attribute 3 : Average user feedback on dance clubs
+Attribute 4 : Average user feedback on juice bars
+Attribute 5 : Average user feedback on restaurants
+Attribute 6 : Average user feedback on museums
+Attribute 7 : Average user feedback on resorts
+Attribute 8 : Average user feedback on parks/picnic spots
+Attribute 9 : Average user feedback on beaches
+Attribute 10 : Average user feedback on theaters
+Attribute 11 : Average user feedback on religious institutions
+
+## Justificación de la elección del dataset:
+El ambito de los datos no es complejo ya que son valoraciones medias de viajeros por lo que no requiere un conocimiento especifico para entender los datos y poder sacar la información que buscamos. 
+El conjuto de datos contiene valores numérico pero se pueden facilmente discretizar por lo que pueden ser usado tanto como supervisados y no supervisados. Además, a parte de las 4 categorías iniciales pretendo también analizar el dataset creando 5 categorías nuevas y intentar buscar algún tipo de associación para mejorar posibles recomendaciones como por ejemplo, si un viajero valora positivamente las galerías de arte y teatros también les gustaría las ir a la playas. Esta informacioón sería muy útil para porder recomendar a los viajeros durante su viaje. 
+
+Este dataset tambien es valido para aplicar un arbol de decision. Además, me gustaria analizar como se comporta con el mismo dataset pero aumentado las etiquetas. Los datasets que me gustaría comparar es uno de 5 valores y el mismo con 10. 
+
+Preguntas que pretendo resolver durante el análisis.
+- Que categorías debería potenciar para mejorar substancialmente la valoración media? Me debería centrar en alguna en concreto?
+- Hay alguna categoría que parezca importante para los viajeros ya sea por votaciones positivas o negativas? 
+- Podría agrupar los viajeros en algún tipo de grupo natural? Si los hubiera, Cuantos hay?
+- Nos gustaría recomendar posibles categorías a viajeros durantne su viaje? Por ejemplo si el viajero ha dato una valoracion positiva a un institucion religiosa que acaba de ver, qué otra categoría debería recomendarle para que pueda tener una mejor experiencia?  
+
+
+## Procesos de limpieza y faltas del conjunto de datos:
+
+Conprobamos la integridad de los datos.
+```{r message= FALSE, warning=FALSE}
+
+# Confimamos que están todos los valores 
+colSums(travelData == " " | travelData == "" | is.na(travelData | travelData == 0))
+```
+Confirmamos que no hay datos nulos.
+
+Hacemos un primer análisis.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+#Estadísticas básicas
+summary(travelData)
+
+```
+Vemos que la media con mejor valoración es para el atributo "parksAndpicnic" que resulta ser también el que tiene el valor mínimo más alto de todos los atributos. Por otra parte el atributo resort contiene la valoración máxima maś alta. Posiblemente menos gente opta por hospedarse en resorts de 5 y 4 estrellas por eso la media no es tan alta pero la gente que si lo hace valoran muy positivamente. Podría haber una diferencia sustancial entre las calidades de los distintos "resorts"? 
+
+En el lado contrario las peores valoraciones medias corresponden restaurantes. Luego, "danceClus" es el atributo peor valorado ya que dos clientes del conjunto del dataset lo valorarón con 0. Lo que resulta ser muy poco indicativo teniendo en cuenta las 980 muestras (véase la comprobación en la figura de abajo).  
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Comprobacion del número de observaciones con valoracion igual a 0 para danceClubs.
+travelData %>% 
+  filter(danceClubs == 0)
+
+# Número total de obserrvaciones.
+travelData %>%
+  summarise(totalRows = n())
+
+```
+
+Preparamos los datos para poder mostra las medias de forma visual. Por lo que tenemos que prepar el data set con el formato correcto para mostrar la media por categorías.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Preparamos la tabla con el formato correcto para mostrar la media por categorías.
+travleDataMean <- travelData %>% 
+                  summarise(artGalleries = mean(artGalleries), 
+                            danceClubs = mean(danceClubs),
+                            juiceBars = mean(juiceBars),
+                            restaurants = mean(restaurants),
+                            museums = mean(museums),
+                            resorts = mean(resorts),
+                            parks = mean(parksAndpicnic),
+                            beaches = mean(beaches),
+                            theaters = mean(theaters),
+                            religious = mean(religiousInstitutions))
+ 
+# Pivotamos las columna para poder mostrarlo gráficamente.
+travleDataMean <- travleDataMean %>%
+  pivot_longer(cols = everything(), names_to = "categories", values_to = "mean") %>%
+  arrange(desc(mean))
+
+# Comprobamos el dataset.
+head(travleDataMean, 10)
+```
+
+Mostramos la medias por categoría de forma ordenada en relacion a su media.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Mostramos la medias por categoría.
+ggplot(travleDataMean, aes(reorder(categories, -mean) , mean)) +
+  geom_col() +
+  ylim(0, 4) +
+  xlab("Categories")
+
+```
+La gráfica muestra claramente las categorías más altas para "park", "beaches" y "religious" y las peor valoradas "museums", "artGaleries" y "restaurantes"
+
+#### Principal Component Analysis Vs Single Value Decomposition
+Intentamos encontrar un subconjunto de los atributos originales que permita obtener modelos de la misma calidad pero reduciendo su dimensionalidad e intentando descubrir que modelo entre "Principal Component Analysis" y "Single Value Decompositionnos" nos da mejor resultado.
+
+REalizamos un análisis conjunto comparando PCA y SVD paso a paso.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Aplicamos Principal components analysis.
+travelData.pca <- princomp(travelData, cor = TRUE, scores = TRUE)
+
+# Aplicamos Single value decomposition.
+travelData.svd <- prcomp(travelData, cor = TRUE, scores = TRUE)
+
+# Mostramos el resultado.
+plot(travelData.pca)
+plot(travelData.svd)
+
+```
+Obtenemos gráficamente la varianza de cada componente. Siempre el primer componente será el que tenga mayor varianza y irá decreciendo hasta el último componente que tendra la menor. La clave está en definir donde hacer el corte de los componentes sín perder calidad. 
+
+*PCA vs SVD*
+El método SVD nos da aparentemente mejor calida ya que sus dos primeras componentes reflejan mayor varianza que con el método PCA. El resultado también se puede medir teniendo en cuenta la pendiente y el codo que forman los componentes en la gráfica. En este caso tambien SVD nos confimra que da un mejor resultado.
+
+Podemos elegir el numero de componentes basandonos en varianza y varianza acumulada porcentual.
+
+*Método mediante "Proportion of variation explained".*
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Mostramos el resultado.
+screeplot(travelData.pca, type = "lines")
+screeplot(travelData.svd, type = "lines")
+```
+Siempre las primeras componentes son las que contienen la máxima variación. Las componentes que generen más pendiente representan más variación. En las últimas comoponentes podemos observar una pendiente mucho menos pronunciada, pero de todas maneras no es completamente plana especialmente para PCA, siendo mejor en el caso de SVD pero no parece que podamos reducir drasticamente la dimensionalidad de este conjunto de datos.
+
+*Método mediante "Comulative variance explained".*
+Para poder representarlo la variaza acumulada necesitamos trabajar un poco los datos. Luego se puede representar gráficamente.
+En este caso he realizado el corte en 90% para mantener un minimo de calidad.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Calculamos la varianzacion.
+pca.var <- travelData.pca$sdev^2
+svd.var <- travelData.svd$sdev^2
+
+# Calculamos para proporción.
+pc.pvar <- pca.var/ sum(pca.var)
+sv.pvar <- svd.var/ sum(svd.var)
+
+# Mostramos el resultado.
+# PCA
+plot(cumsum(pc.pvar), type = "b")
+abline(h = 0.9)
+# SVD
+plot(cumsum(sv.pvar), type = "b")
+abline(h = 0.9)
+
+```
+Necesitariamos 7 componentes para mantener un 90% de variabilidady para PCA y solo 6 componentes para pasar del 90%. 
+
+*Interpretacion de los atributos PCA*
+Podemos utilizar los dos primeros PCA como representacion del conjunto original (high-dimensional data).
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Motramos los pesos o loadings (PCA).
+travelData.pca$loadings
+
+```
+Observamos también los pesos o loading que han sido omitidos (valores cercanos a cero) de cada atributo. 
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Nos centramos en las dos primeros componentes.
+# PCA.
+biplot(travelData.pca, col = c("gray","steelblue"), cex = c(0.2, 1.3))
+# SVD.
+biplot(travelData.svd, col = c("gray","steelblue"), cex = c(0.2, 0.7))
+
+```
+La gráfica de arriba representa los "loadings" en azul y "scores" en gris de los dos primeros componentes. El angulo entre los distintos vectores que representan los atributos indican la correlación entre ellos y la longitud del vector es proporcional a la desviación estandar del atributo. De forma analoga podemos ver la correlación entre el atributo y un componentes, mediante el angulo entre el eje del PC y el vector del atributo.
+
+En el método PCA, el componente 1 contiene 3 loading positivas "beach", "religiousInstitution" and "artGalleries" y en el lado opuesto (negativas) el resto de componentes. Ningun vector destaca excesivametne por su longuitud. En cambio en la gráfica usando SVD, se puede ver que la magnitud de los vectores es más desigual, destacando el de "juiceBar." 
+
+Representamos como quedan los "scores" aunque para este conjunto de datos en concreto no podemos sacar mucha más información al respecto.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Guardamos los scores
+scoresPca <- data.frame(travelData.pca$scores)
+
+# Mostramos los scores de PC1 y PC2.
+# PCA.
+ggplot(scoresPca, aes(Comp.1, Comp.2, label = rownames(scoresPca))) +
+  geom_text(size = 1, col = "steelblue")
+
+```
+
+
+#### Análisis del conjunto de datos despues de la discretización:
+En el subconjunto inicial hay 5 categorías. Me gustaría aumentar este numero a 10. Reescalamos los valores en el rango para poder discretizar más tarder los valores.
+
+Crearemos las siguientes etiquetas:
+10) valores de 10 a 11 -> VeryExcellent 
+9)  valores de 9  a 10 -> Excellent 
+8)  valores de 8  a  9 -> VeryGood
+7)  valores de 7  a  8 -> Good
+6)  valores de 6  a  7 -> AboveAverage
+5)  valores de 5  a  6 -> Average
+4)  valores de 4  a  5 -> Poor
+3)  valores de 3  a  4 -> VeryPoor
+2)  valores de 2  a  3 -> Terrible 
+1)  valores de 1  a  2 -> VeryTerrible 
+
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+# Copiamos el dataframe.
+traveScaledlData <- travelData
+
+# Reescalado de las columnas
+traveScaledlData$artGalleries <- rescale(travelData$artGalleries, to=c(1,11), from = range(0:4))
+traveScaledlData$danceClubs <- rescale(travelData$danceClubs, to=c(1,11), from = range(0:4))
+traveScaledlData$juiceBars <- rescale(travelData$juiceBars, to=c(1,11), from = range(0:4))
+traveScaledlData$restaurants <- rescale(travelData$restaurants, to=c(1,11), from = range(0:4))
+traveScaledlData$museums <- rescale(travelData$museums, to=c(1,11), from = range(0:4))
+traveScaledlData$resorts <- rescale(travelData$resorts, to=c(1,11), from = range(0:4))
+traveScaledlData$parksAndpicnic <- rescale(travelData$parksAndpicnic, to=c(0,10), from = range(0:4))
+traveScaledlData$beaches <- rescale(travelData$beaches, to=c(1,11), from = range(0:4))
+traveScaledlData$theaters <- rescale(travelData$theaters, to=c(1,11), from = range(0:4))
+traveScaledlData$religiousInstitutions <- rescale(travelData$religiousInstitutions, to=c(1,11), from = range(0:4))
+
+# Factorizamos el dataframe.
+travelFactor <- traveScaledlData
+
+# Convertimos los datos a numeros enteros.
+travelFactor$artGalleries <- as.integer(travelFactor$artGalleries) 
+travelFactor$danceClubs <- as.integer(travelFactor$danceClubs) 
+travelFactor$juiceBars <- as.integer(travelFactor$juiceBars) 
+travelFactor$restaurants <- as.integer(travelFactor$restaurants) 
+travelFactor$museums <- as.integer(travelFactor$museums) 
+travelFactor$resorts <- as.integer(travelFactor$resorts) 
+travelFactor$parksAndpicnic <- as.integer(travelFactor$parksAndpicnic) 
+travelFactor$beaches <- as.integer(travelFactor$beaches)
+travelFactor$theaters <- as.integer(travelFactor$theaters) 
+travelFactor$religiousInstitutions <- as.integer(travelFactor$religiousInstitutions)
+
+travelFactorNo <- travelFactor
+
+# Comprobamos el dataset.
+#glimpse(travelFactor)
+
+# Asignamos etiquetas a todos los valores de los atributos.
+travelFactor <- travelFactor %>%
+  mutate(artGalleries = dplyr::recode(artGalleries, `1` = "0veryTerrible", `2` = "1terrible",`3` = "2veryPoor",
+                                            `4` = "3poor", `5` = "4average",`6` = "5aboveAverage", `7` = "6good", 
+                                            `8` = "7veryGood",`9` = "8excellent",`10` = "9veryExcellent",)) %>%
+  
+  mutate(danceClubs =dplyr::recode(danceClubs,     `1` = "0veryTerrible", `2` = "1terrible",`3` = "2veryPoor",
+                                            `4` = "3poor", `5` = "4average",`6` = "5aboveAverage", `7` = "6good", 
+                                            `8` = "7veryGood",`9` = "8excellent",`10` = "9veryExcellent",)) %>%
+  
+  mutate(juiceBars = dplyr::recode(juiceBars,       `1` = "0veryTerrible", `2` = "1terrible",`3` = "2veryPoor",
+                                            `4` = "3poor", `5` = "4average",`6` = "5aboveAverage", `7` = "6good", 
+                                            `8` = "7veryGood",`9` = "8excellent",`10` = "9veryExcellent",)) %>%
+    
+  mutate(restaurants = dplyr::recode(restaurants,   `1` = "0veryTerrible", `2` = "1terrible",`3` = "2veryPoor",
+                                            `4` = "3poor", `5` = "4average",`6` = "5aboveAverage", `7` = "6good", 
+                                            `8` = "7veryGood",`9` = "8excellent",`10` = "9veryExcellent",)) %>%
+  
+  mutate(museums = dplyr::recode(museums,           `1` = "0veryTerrible", `2` = "1terrible",`3` = "2veryPoor",
+                                            `4` = "3poor", `5` = "4average",`6` = "5aboveAverage", `7` = "6good", 
+                                            `8` = "7veryGood",`9` = "8excellent",`10` = "9veryExcellent",)) %>%
+    
+  mutate(resorts = dplyr::recode(resorts,           `1` = "0veryTerrible", `2` = "1terrible",`3` = "2veryPoor",
+                                            `4` = "3poor", `5` = "4average",`6` = "5aboveAverage", `7` = "6good", 
+                                            `8` = "7veryGood",`9` = "8excellent",`10` = "9veryExcellent",)) %>%
+    
+  mutate(parksAndpicnic = dplyr::recode(parksAndpicnic, `1` = "0veryTerrible", `2` = "1terrible",`3` = "2veryPoor",
+                                            `4` = "3poor", `5` = "4average",`6` = "5aboveAverage", `7` = "6good", 
+                                            `8` = "7veryGood",`9` = "8excellent",`10` = "9veryExcellent",)) %>%
+    
+  mutate(beaches = dplyr::recode(beaches, `1` = "0veryTerrible", `2` = "1terrible",`3` = "2veryPoor",
+                                            `4` = "3poor", `5` = "4average",`6` = "5aboveAverage", `7` = "6good", 
+                                            `8` = "7veryGood",`9` = "8excellent",`10` = "9veryExcellent",)) %>%
+    
+  mutate(theaters = dplyr::recode(theaters, `1` = "0veryTerrible", `2` = "1terrible",`3` = "2veryPoor",
+                                            `4` = "3poor", `5` = "4average",`6` = "5aboveAverage", `7` = "6good", 
+                                            `8` = "7veryGood",`9` = "8excellent",`10` = "9veryExcellent",)) %>%
+    
+  mutate(religiousInstitutions = dplyr::recode(religiousInstitutions, `1` = "0veryTerrible", `2` = "1terrible",`3` = "2veryPoor",
+                                            `4` = "3poor", `5` = "4average",`6` = "5aboveAverage", `7` = "6good", 
+                                            `8` = "7veryGood",`9` = "8excellent",`10` = "9veryExcellent",)) 
+
+
+# Discretizamos todas las variables.
+cols<-c("artGalleries", "danceClubs", "juiceBars", "restaurants", "museums", "resorts", "parksAndpicnic", "beaches", "theaters", "religiousInstitutions")
+for (i in cols){
+  travelFactor[,i] <- as.factor(travelFactor[,i])
+}
+
+# Comprobamos el dataset.
+glimpse(travelFactor)
+
+```
+
+Trabajamos el data set para poder visualizar las categorías en función del feedback de los viajeros. Para poder conseguir nuestro objetivo tranformamos el dataset a dos columnas (dataframe tipo "long"), una con el atributo "categorías" y el otro con "feedback" que contiene las valoraciones de los viajeros.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Pivotamos las columna para poder mostrarlo gráficamente.
+travelFactorLong <- travelFactor %>%
+  pivot_longer(cols = everything(), names_to = "categories", values_to = "feedback") %>%
+  arrange(desc(feedback))
+
+# Comprobamos el dataset mostrando las tres primeras columnas.
+head(travelFactorLong,3)
+
+```
+
+Mostramos las frecuencias por categoría
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Tabla de frecuencias
+table(travelFactorLong)
+
+```
+De esta tabla se pueden destacar varios aspectos. Destaca que el extremo negativo "veryTerrible" tiene más frecuencias que el extremo positivo "veryExcellent" y otro aspecto esperado es que las valoraciones medias  como pueden ser "good" o "average" tiene un mayor numero de frecuencias.
+
+En la tabla de abajo observamos que el máximo porcetaje es de 20% sobre la valoracion "good" sobre el total de las categorías .
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Tabla de frecuencias
+prop.table(table(travelFactorLong$feedback))*100
+
+```
+
+La siguiente gráfica muestra el peso de todas las categorías en funcion de la valoración. Se puede hacer difícil obtener informacion de la gráfica ya que muestra toda la suma de las valoraciones y las columnas quedan muy divididas. 
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Mostramoslas categorías como funcion de feedback
+travelFactorLong %>%
+  ggplot(aes(feedback, fill=categories)) +
+    geom_bar() +
+    scale_x_discrete(labels = abbreviate)
+
+```
+
+En está ocasion filtramos solo las categoría que tengan un peso importante poniendo el limite a 200 valoraciones. Esto nos ayuda a tener una mejor idea de como queda la distribucion de las categorías en funcion de las valoraciones. Vemos como "restaurantes" tiene una muy mala valoración. Contiene el mayor numero de valoraciones negativas de todas las demás categorías.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Filtramos para feedback mayores a 200.
+travelFactorLong %>%
+  group_by(categories, feedback) %>%
+  summarise(counter = n()) %>%
+  filter(counter > 200) %>%
+  # Mostramoslas categorías como funcion de feedback.
+ggplot(aes(x = feedback, y = counter, fill= categories)) +
+  geom_col() +
+  scale_x_discrete(labels = abbreviate)
+
+```
+
+Analizo más en detalla la categoría restaurantes.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Filtramos para la categoría restaurantes.
+travelFactorLong %>%
+  group_by(categories, feedback) %>%
+  summarise(counter = n()) %>%
+  filter(counter > 0 & (categories == "restaurants")) %>%
+  # Mostramoslas categorías como funcion de feedback.
+  ggplot(aes(reorder(x = feedback, counter), y = counter, fill= categories)) +
+    geom_col() +
+    scale_x_discrete(labels = abbreviate)
+
+```
+Comprobamos que hay una opinion generalizada sobre los restaurantes. Podemos trabajar con la hipotesis que la gente valora los restaurantes a la hora de viajar y que podrían esperan una minima calidad de ellos. Sin duda este es un aspecto a mejorar para poder aumentar la valoración en general de los viajeros. Se podría trabajar en otras encuestas sobre que es lo que hace que la valoracion sea tan baja dentro de esta categoría; higiene, materias primas, localizacion, servicio ..etc.
+
+Ahora mostramos las mejores valoraciones.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Filtramos para las categoría mejor valoradas.
+travelFactorLong %>%
+  group_by(categories, feedback) %>%
+  summarise(counter = n()) %>%
+  filter(counter > 0 & (categories == "parksAndpicnic" | categories == "beaches" | categories == "religiousInstitutions")) %>%
+  # Mostramoslas categorías como funcion de feedback.
+  ggplot(aes(reorder(x = feedback, -counter), y = counter)) + 
+  geom_col() + facet_wrap(~categories) +
+  xlab("Feedback") +
+  scale_x_discrete(labels = abbreviate)
+
+```
+Por otro lado las mejores valoraciones destacan tres categorías: Playas y parques que están centradas con un buena valorción "good" y luego las valoraciones para instituciones religuioas se mueven entre "aboveAverage", "good", "veryGood" y incluso "excellent" y "veryEcellent"
+
+Veamos como quedaría la categorías de "veryExceptional" y "exceptional" aunque el numero no sea muy indicativo ya que esta por debajo de las 200 valoraciones. 
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Filtramos para la categoría restaurantes.
+travelFactorLong %>%
+  group_by(categories, feedback) %>%
+  summarise(counter = n()) %>%
+  filter(counter > 0 & (feedback == "9veryExcellent" | feedback == "8excellent" )) %>%
+  # Mostramoslas categorías como funcion de feedback.
+  ggplot(aes(reorder(x = feedback, counter), y = counter, fill= categories)) +
+    geom_col() +
+    xlab("Feedback") +
+    scale_x_discrete(labels = abbreviate)
+
+```
+Vemos que "religiousInstitution" es la mejor posicionada por el numero de valoraciones positivas.
+
+Centrandonos ahora sobre el atributo restaurantes, veamos como se relaciona con otras variables como; "theaters", "juiceBars", "resorts" y "museums". 
+Ya que estos atributos eran atributos relevantes en el análisis SVD.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Mostra restaurantes en funcion de teatros.
+ggplot(travelFactor, aes(theaters, fill=restaurants)) +
+    geom_bar() +
+    scale_x_discrete(labels = abbreviate)
+
+```
+La mayoría que valora los teatro "poor" y "average" también lo hace muy negativamente para restaurates con "terrible".
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Mostra restaurantes en funcion de teatros.
+ggplot(travelFactor, aes(juiceBars, fill=restaurants)) +
+    geom_bar() +
+    scale_x_discrete(labels = abbreviate)
+
+```
+Obserbamos que hay valoraciones positivas para "juiceBar" pero sin embargo son muy malas para restaurantes.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Mostra restaurantes en funcion de resorts.
+ggplot(travelFactor, aes(resorts, fill=restaurants)) +
+    geom_bar() +
+    scale_x_discrete(labels = abbreviate)
+
+```
+En este caso la distribución esta más centrada sobre sobre "average" con forma de una distribucion normal.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Mostra restaurantes en funcion de museos
+ggplot(travelFactor, aes(museums, fill=restaurants)) +
+    geom_bar() +
+    scale_x_discrete(labels = abbreviate) +
+    scale_y_discrete(labels = abbreviate)
+
+```
+La mayoría que valora negativametne los museos tambien lo hace para restaurantes.
+
+******
+# Rúbrica
+******
+20%. Justificación razonada y completa de la elección del juego de datos donde se detalla el potencial analítico que se intuye y que se podrán crear los modelos solicitados. El estudiante deberá visitar los siguientes portales -o otros que desee- de datos abiertos para seleccionar su juego de datos:
+  + [Datos.gob.es](https://datos.gob.es/es/catalogo?q=&frequency=%7B"type"%3A+"months"%2C+"value"%3A+"1"%7D&sort=score+desc%2C+metadata_modified+desc)
+  + [UCI Machine Learning](https://archive.ics.uci.edu/ml/datasets.php)
+  + [Datasets Wikipedia](https://en.wikipedia.org/wiki/List_of_datasets_for_machine-learning_research)
+  + [Datos abierto Madrid](https://datos.madrid.es/portal/site/egob/)
+  + [Datos abiertos Barcelona](https://opendata-ajuntament.barcelona.cat/ca/)
+  + [London Datastore](https://data.london.gov.uk/)
+  + [NYC OpenData](https://opendata.cityofnewyork.us/)
+* 25%. Redactar de forma clara y completa la información extraída del análisis exploratorio. Distribuciones, correlaciones, anomalías, ... ¿Qué se quiere obtener? Cómo se hace? ¿Qué se obtiene? Como se interpreta?
+* 25%. Explicación clara de cualquier tarea de limpieza o acondicionado que se realiza. Justificando el motivo y mencionando las ventajas de la acción tomada.
+* 25%. Realizar la discretización de los datos que lo requieran utilizando los diversos métodos vistos y justificando su elección.
+*  5%. Se realiza un proceso de PCA o SVD donde se aprecia mediante explicaciones y comentarios que el estudiante entiende todos los pasos y se comenta extensamente el resultado final obtenido.
+
+  ---
+
+
+title: 'Mineriaa de datos: PRA2 - Modelado de un juego de datos'
+
+
+## Descripción de la PEC a realizar
+
+### 1. Aplicar un modelo de generación de reglas a partir de reglas de asociación. Hay que usar el algoritmo arules.
+
+En este ejemplo vamos trabajar el algoritmo *apriori* para obtener reglas de asociación a partir de un data set. Dichas reglas nos ayudarán a comprender cómo la información del data set se relaciona entre si.
+
+Si encontramos una relacion entre el tipo de valoraciones, ya sea esta positiva o negativa, con una determinada categoría nos ayudaría mejorar la recomendaciones de los clientes o evitar recomendar categorías donde la relación encontrada sea negativa.
+
+Para poder utilizar las reglas de associacion he tenido que manipular los datos para que tenga el formato adecuado para le modelo. En este caso el valor de las celdas incluyen la categoría y la valoración, por ejemplo para un usuario cualquiera (row) para la categoría (column) artGalleries con valorcion VeryTerrible se transformaria en el valor artGalleriesVeryTerrible. Hacemos esto para todos los valores.
+```{r message= FALSE, warning=FALSE}
+
+#head(travelFactor)
+# Asignamos etiquetas a todos los valores de los atributos.
+travelFactor <- travelFactorNo %>%
+  mutate(artGalleries = dplyr::recode(artGalleries, `1` = "artGalleriesVeryTerrible", `2` = "artGalleriesTerrible",`3` = "artGalleriesVeryPoor",
+                                            `4` = "artGalleriesPoor", `5` = "artGalleriesAverage",`6` = "artGalleriesAboveAverage", `7` = "artGalleriesGood", 
+                                            `8` = "artGalleriesVeryGood",`9` = "artGalleriesExcellent",`10` = "artGalleriesVeryExcellent",)) %>%
+  
+  mutate(danceClubs =dplyr::recode(danceClubs,     `1` = "danceClubsVeryTerrible", `2` = "danceClubsTerrible",`3` = "danceClubsVeryPoor",
+                                            `4` = "danceClubsPoor", `5` = "danceClubsAverage",`6` = "danceClubsAboveAverage", `7` = "danceClubsGood", 
+                                            `8` = "danceClubsVeryGood",`9` = "danceClubsExcellent",`10` = "danceClubsVeryExcellent",)) %>%
+  
+  mutate(juiceBars = dplyr::recode(juiceBars,       `1` = "juiceBarsVeryTerrible", `2` = "juiceBarsTerrible",`3` = "juiceBarsVeryPoor",
+                                            `4` = "juiceBarsPoor", `5` = "juiceBarsAverage",`6` = "juiceBarsAboveAverage", `7` = "juiceBarsGood", 
+                                            `8` = "juiceBarsVeryGood",`9` = "juiceBarsExcellent",`10` = "juiceBarsVeryExcellent",)) %>%
+    
+  mutate(restaurants = dplyr::recode(restaurants,   `1` = "restaurantsVeryTerrible", `2` = "restaurantsTerrible",`3` = "restaurantsVeryPoor",
+                                            `4` = "restaurantsPoor", `5` = "restaurantsAverage",`6` = "restaurantsAboveAverage", `7` = "restaurantsGood", 
+                                            `8` = "restaurantsVeryGood",`9` = "restaurantsExcellent",`10` = "restaurantsVeryExcellent",)) %>%
+  
+  mutate(museums = dplyr::recode(museums,           `1` = "museumsVeryTerrible", `2` = "museumsTerrible",`3` = "museumsVeryPoor",
+                                            `4` = "museumsPoor", `5` = "museumsAverage",`6` = "museumsAboveAverage", `7` = "museumsGood", 
+                                            `8` = "museumsVeryGood",`9` = "museumsExcellent",`10` = "museumsVeryExcellent",)) %>%
+    
+  mutate(resorts = dplyr::recode(resorts,           `1` = "resortsVeryTerrible", `2` = "resortsTerrible",`3` = "resortsVeryPoor",
+                                            `4` = "resortsPoor", `5` = "resortsAverage",`6` = "resortsAboveAverage", `7` = "resortsGood", 
+                                            `8` = "resortsVeryGood",`9` = "resortsExcellent",`10` = "resortsVeryExcellent",)) %>%
+    
+  mutate(parksAndpicnic = dplyr::recode(parksAndpicnic, `1` = "parksAndpicnicVeryTerrible", `2` = "parksAndpicnicTerrible",`3` = "parksAndpicnicVeryPoor",
+                                            `4` = "parksAndpicnicPoor", `5` = "parksAndpicnicAverage",`6` = "parksAndpicnicAboveAverage", `7` = "parksAndpicnicGood", 
+                                            `8` = "parksAndpicnicVeryGood",`9` = "parksAndpicnicExcellent",`10` = "parksAndpicnicVeryExcellent",)) %>%
+    
+  mutate(beaches = dplyr::recode(beaches, `1` = "beachesVeryTerrible", `2` = "beachesTerrible",`3` = "beachesVeryPoor",
+                                            `4` = "beachesPoor", `5` = "beachesAverage",`6` = "beachesAboveAverage", `7` = "beachesGood", 
+                                            `8` = "beachesVeryGood",`9` = "beachesExcellent",`10` = "beachesVeryExcellent",)) %>%
+    
+  mutate(theaters = dplyr::recode(theaters, `1` = "theatersVeryTerrible", `2` = "theatersTerrible",`3` = "theatersVeryPoor",
+                                            `4` = "theatersPoor", `5` = "theatersAverage",`6` = "theatersAboveAverage", `7` = "theatersGood", 
+                                            `8` = "theatersVeryGood",`9` = "theatersExcellent",`10` = "theatersVeryExcellent",)) %>%
+    
+  mutate(religiousInstitutions = dplyr::recode(religiousInstitutions, `1` = "religiousInstitutionsVeryTerrible", `2` = "religiousInstitutionsTerrible",`3` = "religiousInstitutionsVeryPoor",
+                                            `4` = "religiousInstitutionsPoor", `5` = "religiousInstitutionsAverage",`6` = "religiousInstitutionsAboveAverage", `7` = "religiousInstitutionsGood", 
+                                            `8` = "religiousInstitutionsVeryGood",`9` = "religiousInstitutionsExcellent",`10` = "religiousInstitutionsVeryExcellent",)) 
+
+
+travelFactor1 <- travelFactor %>% mutate(id = row_number())
+
+#Mostaramos los datos.
+head(travelFactor1)
+```
+
+Creamo un data frame con dos unicas columnas *Usuaruio* más la *Valoración* (feedback)
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+df1 <- travelFactor1 %>% select(11, 1)
+df1 <- df1 %>% rename(feedback = artGalleries)
+
+df2 <- travelFactor1 %>% select(11, 2)
+df2 <- df2 %>% rename(feedback = danceClubs)
+
+df3 <- travelFactor1 %>% select(11, 3)
+df3 <- df3 %>% rename(feedback = juiceBars)
+
+df4 <- travelFactor1 %>% select(11, 4)
+df4 <- df4 %>% rename(feedback = restaurants)
+
+df5 <- travelFactor1 %>% select(11, 5)
+df5 <- df5 %>% rename(feedback = museums)
+
+df6 <- travelFactor1 %>% select(11, 6)
+df6 <- df6 %>% rename(feedback = resorts)
+
+df7 <- travelFactor1 %>% select(11, 7)
+df7 <- df7 %>% rename(feedback = parksAndpicnic)
+
+df8 <- travelFactor1 %>% select(11, 8)
+df8 <- df8 %>% rename(feedback = beaches)
+
+df9 <- travelFactor1 %>% select(11, 9)
+df9 <- df9 %>% rename(feedback = theaters)
+
+df10 <- travelFactor1 %>% select(11, 10)
+df10 <- df10 %>% rename(feedback = religiousInstitutions)
+
+dfTravelAssociation<- rbind(df1,df2,df3,df4,df5,df6,df7,df8,df9,df10)
+
+#Mostramos la cabecera.
+head(dfTravelAssociation,3)
+```
+
+Ya tenemos el conjunto de datos listos para poder hacer una lista.
+```{r message= FALSE, warning=FALSE}
+
+# Data list de los atributos necesarios
+dlTravelAssociation = split(dfTravelAssociation$feedback, dfTravelAssociation$id)
+
+#Comprobamos el resultado 
+head(dlTravelAssociation,1)
+
+```
+
+Generamos la base de datos tipo transactional.
+```{r message= FALSE, warning=FALSE}
+
+# Generamos la base de datos tipo transactional desde la data list
+trxTravelAssociation = as(dlTravelAssociation, "transactions")
+
+# Comprobamos el resultado
+inspect(head(trxTravelAssociation,1))
+
+```
+
+Mostramos mediante una gráficalas 10 valoraciones que se repiten con más frecuencia en valores absolutos.
+```{r message= FALSE, warning=FALSE}
+
+# Mostramos el top 10
+itemFrequencyPlot(trxTravelAssociation, 
+                  type= "absolute",
+                  topN = 10,
+                  horiz = TRUE,
+                  main = "Frecuencia de las valoraciones")
+
+```
+Comprovamos que la categoría de Parks and picnic con la valoración *good* es la más frecuente seguida de Restaurantes con la valoración *Terrrible*
+
+Extraemos las valoraciones más frecuentes y comprobamos que la proporción de transaciones para parksAndpicnicGood es de 94.28%.
+```{r message= FALSE, warning=FALSE}
+
+# Aplicamos el algoritmo apriori
+itemSets = apriori(trxTravelAssociation,
+                  parameter = list(support = 0.1,
+                                   target = 'frequent'
+                                   )
+                  )
+
+# Ordenamos y mostramos el resultado  
+inspect(head(sort(itemSets, by = 'support'),5))
+
+```
+
+Extraemos las valoraciones más frecuentes para un tamaño minimo de 2 itemset y comprobamos que la proporción de transacionesque es de 68.67%. A medidad que el itemset contiene más items la confianza disminuye.
+```{r message= FALSE, warning=FALSE}
+
+# # Aplicamos el algoritmo apriori
+itemSets = apriori(trxTravelAssociation,
+                  parameter = list(support = 0.01,
+                                   target = 'frequent',
+                                   minlen = 2
+                                   )
+                  )
+
+# Ordenamos y mostramos el resultado
+inspect(head(sort(itemSets, by = 'support'),5))
+
+```
+
+#### Applicamos Apriori para obtener las reglas
+
+Aplicamos ahora el algoritmo para obtener todas las reglas cuando la confianza minima es 40%, apoyo es de 1% y un minimo de items por sets de 3. 
+El resultado obtenido es de un total de 41045 reglas.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Creamos lar reglas basandonos en los siguientes parámetros
+rulestrxTravelAssociation = apriori(trxTravelAssociation,
+                        parameter = list( supp = 0.01,
+                                          conf = 0.40,
+                                          minlen= 3,
+                                          target = "rules"
+                                        )
+                      )
+
+# Obtenemos reglas 
+inspect(head(sort(rulestrxTravelAssociation, by = "confidence"),5))
+
+# Summary
+summary(rulestrxTravelAssociation)
+
+```
+
+##### Reducción de reglas
+
+Con los parámetros anteriores hemos obtenido muchas reglas pero en realidad hay reglas que son redundantes y podrían ser eliminadas disminuyendo el numero total de reglas sín perder información. Se define como regla redundante si existe una regla general mayor con el mismo o mayor nivel de confianza.
+```{r message= FALSE, warning=FALSE}
+
+# obtenemos la reglas redundantes
+redRulestrxTravelAssociation = is.redundant(rulestrxTravelAssociation)
+# Eliminamos las reglas redundantes del conjunto de reglas
+rulestrxTravelAssociation.pruned = rulestrxTravelAssociation[!redRulestrxTravelAssociation]
+
+# Obtenemos las 10 primeras reglas 
+inspect(head(sort(rulestrxTravelAssociation.pruned, by = "support"),20))
+```
+Si nos centramos en las primeras valoraciones positivas vemos un grupo de categorías que se relacionan entres si 18, 18 y 20. Por ejemplo en la regla 18 vemos que a un posile viajero que le gusten la playas y las instituciones religiosas tendrá un 98.7 porciento de confianza que tanbien lo haga en la categoría de parckAndpicnic.
+
+[18]	{beachesVeryGood,religiousInstitutionsGood}	    =>	{parksAndpicnicGood}	      0.2479592	0.9310345	0.9874608	243
+[19]	{parksAndpicnicGood,religiousInstitutionsGood}	=>	{beachesVeryGood}	          0.2479592	0.5704225	0.9824501	243
+[20]	{beachesVeryGood,parksAndpicnicGood}	          =>	{religiousInstitutionsGood} 0.2479592	0.4533582	0.9700678
+
+En la categoría de restaurantes no se han encontrado reglas con valoracion positivas. Por lo que no tenemos informacion suficiente para poder aconsejar a ciertos viajeros ir a restaurantes basandonos en el historial. Además, esta categoría es bastante evidente que una categoría a desaconsejar a cualquier tipo de vajero por lo visto en el analisis previo de los datos.
+```{r message= FALSE, warning=FALSE}
+
+# Filtramos las valoraciones positivas para la categoría restaurantes
+inspect(subset(rulestrxTravelAssociation.pruned, subset = rhs %in% "restaurantsAverage"))
+inspect(subset(rulestrxTravelAssociation.pruned, subset = rhs %in% "restaurantsAboveAverage"))
+inspect(subset(rulestrxTravelAssociation.pruned, subset = rhs %in% "restaurantsGood"))
+inspect(subset(rulestrxTravelAssociation.pruned, subset = rhs %in% "restaurantsVeryGood"))
+inspect(subset(rulestrxTravelAssociation.pruned, subset = rhs %in% "restaurantsExcellent"))
+inspect(subset(rulestrxTravelAssociation.pruned, subset = rhs %in% "restaurantsGood"))
+
+```
+
+### 2. Aplicar un modelo no supervisado y basado en el concepto de distancia, sobre el juego de datos. Hay que usar el algoritmo kmeans.
+
+Comprobamos que la base de datos esta en el formato idoneo para aplicar Kmeans. 
+Vemos que es una base de datos donde no hay numeros decimales, el rango de los numeros oscila entre 1 y 10. Veamos como se comporta Kmeans con este tipo de base de datos.
+```{r message= FALSE, warning=FALSE}
+str(travelFactorNo)
+```
+
+Probamos el algoritmo Kmeans para distintas k para obtener la distancia interna total de los distintos cluster(Total within-cluster). Este método no mide distacia con respecto a los vecinos.
+```{r message= FALSE, warning=FALSE}
+
+# Realizamos un bucle para valores que van desde 1 a 10.
+tottravelFactorNo <- map_dbl( 1:10, function(k) {
+  model <- kmeans(travelFactorNo, center = k)
+  model$tot.withinss})
+
+```
+
+Procesamos los datos para poder mostrarlos mediante la libreria ggplot.
+```{r message= FALSE, warning=FALSE}
+
+# Generamos un dataframe de los datos obtenidos.
+elbowtottravelFactorNoDf <- data.frame(k = 1:10, tottravelFactorNo = tottravelFactorNo)
+
+# Comprobamos el paso anterior mostrando las primeras lineas ...
+head(elbowtottravelFactorNoDf, 3)
+
+# ...y lo mostramos por pantalla.
+ggplot(elbowtottravelFactorNoDf, aes(x = k, y = tottravelFactorNo)) + 
+  geom_line() +
+  scale_x_continuous( breaks = 1:10)
+  
+```
+En la gráfica se ve la logica de este método ya que cuando más clusters tenemos menor distancia. La distancia seía 0 cuando K =  Numero de observaciones por lo que cada muestra sería su propio cluster.
+
+Vemos que el codo visible aparece en k = 2.
+```{r message= FALSE, warning=FALSE}
+
+# Aplicamos el algoritmo Kmeans
+travelFactorNo3 <- kmeans(travelFactorNo, center = 2)
+
+# Convertimos el array en un data frame para poder visualizarlo con la libreria Ggplo2
+travelFactorNoDf <- as.data.frame(travelFactorNo)
+
+# Añadimos la columna con los clusters
+travelFactorNoDf <- mutate(travelFactorNoDf, cluster = travelFactorNo3$cluster)
+
+# Gráfica restaurants y museums
+ggplot(travelFactorNoDf, aes(x = restaurants, y = museums, color = factor(cluster) )) +
+  geom_point()
+
+# Gráfica restaurants y resorts
+ggplot(travelFactorNoDf, aes(x = restaurants, y = resorts, color = factor(cluster))) +
+  geom_point()
+
+# Gráfica restaurants y theaters
+ggplot(travelFactorNoDf, aes(x = restaurants, y = theaters, color = factor(cluster))) +
+  geom_point()
+
+```
+Lo primero que observamos es que la distancia entre cada par observaciones es siempre la misma. Tambien vemos que la mayoría de observaciones se solpan en los mismos puntos. 
+Kmeans no parece el método más idoneo para este tipo de conjunto de datos.
+
+Analizamos como quedan los grupos detectados.
+
+*Restaurantes / Museos*
+El grupo 2 (verde) comprente todas las valoraciones desde 6 hasta 1 para museos y en caso de restaurantes tambien está bastante distribuido entre las valoraciones pero sobretodo la parte más baja (valoraciones negativas). 
+EL grupo 1 (Rojo) comprente todas las valoraciones posibles que irían desde 1 hasta 9 para Museos y sobretodo la parte más baja para restaurantes con algunas observaciones sueltas en la zona alta.
+
+*Restaurantes / Resorts*
+El grupo 2 (verde) se distribuye sobre las valoraciones negativas de ambas categorías. 
+EL grupo 1 (Rojo) se distribuye sobre la zona alta para resorts y la zona baja para restaurantes con algua observacion suelta en la zona alta.
+
+*Restaurantes / Teatros*
+El grupo 2 (verde) comprente todas las valoraciones posibles que irían desde 2 hasta 8 para teatros y en caso de restaurantes comprendería sobretodo la parte baja y media de las valoraciones. 
+EL grupo 1 (Rojo) comprente las valociones *poor* ( centradas sobre 4) para la categoría teatros y en caso de restaurantes está más distrbuido abarcando las valoraciones 2, 3, 4, 6, 8 y 9. 
+
+### 3. Aplica de nuevo el modelo anterior, pero usando una métrica distinta y compara los resultados. Hay que usar un algoritmo de clustering diferente al kmeans.
+
+Hierarchical clustering
+
+Generamos la matriz de distancia.
+```{r message= FALSE, warning=FALSE}
+
+# Calculamos la distancia entre observaciones mediante la método "euclidean" (Distancia Euclidiana)
+travelDist <- dist(travelFactorNo, method = "euclidean")
+```
+
+Una vez hemos calculado la matriz de distancias para todas las observaciones podemos crear el cluster jerárquico. Hay diferentes métodos para unir las obserciones o grupo de observaciones entre sí y así poder ir formando, con las observaciones, clusters jerárquicos. 
+
+- Average, hace la media de las observaciones del grupo.
+
+- Complete, seleccina la observación más alejada, la distancia máxima posible. 
+
+- Single, seleccina la observación más cercana, la distancia minima posible. 
+
+Analizo los dedrogramas y veo que método me da mejor agrupación.
+
+Método por "average":
+```{r message= FALSE, warning=FALSE}
+# Método por "average"
+travelAvg <- hclust(travelDist, method = "average")
+plot(travelAvg)
+#rect.hclust(wineAvg , k = 10, border = 2:2)
+
+# Otra forma de colorear los posibles clusters
+dendtTraveleAvg <- as.dendrogram(travelAvg)
+dendColorTravelAvg <- color_branches(dendtTraveleAvg, h = 5)
+plot(dendColorTravelAvg)
+
+```
+He probado ha realizar el corte a diferentes alturas pero me salen cluster muy desiguales.
+
+Método por "complete":
+```{r message= FALSE, warning=FALSE}
+
+# Método por "complete"
+travelMax <- hclust(travelDist, method = "complete")
+plot(travelMax)
+rect.hclust(travelMax , k = 3, border = 2:6)
+
+```
+He formado tres clusters con una altura de 11.
+
+Método por "single":
+```{r message= FALSE, warning=FALSE}
+
+# Método por "single"
+travelMin <- hclust(travelDist, method = "single")
+plot(travelMin)
+rect.hclust(travelMin , k = 10, border = 2:6)
+
+# Otra forma de colorear los posibles clusters
+#dendWineMin <- as.dendrogram(wineMin)
+#dendColorWineMin <- color_branches(dendWineMin, h = 3)
+#plot(dendColorWineMin)
+
+```
+El método complete con k=3 es el que mejor resultado nos da con cluster más uniformes.
+
+Realizamos el corte en k = 3 y mostramos el resultado gráficamente.
+
+En este caso y a differencia de Kmeans genera 3 agrupaciones (k=3).
+
+### 4. Aplicar un modelo supervisado sobre el juego de datos sin haber aplicado previamente PCA/SVD.Hay que usar un árbol de decisión
+
+Árbol de decisión 
+Entrenamos nuestro modelo utilizando observaciones aleatorias del dataset. En este caso vamos a utilizar el 80% de observaciones para entrenar el modelo y 20% para testearlo. El subconjuto de observaciones de testeo y entrenamiento lo guardamos en las variables correspondientes.
+
+Buscamos predicciones sobre la categoría restaurantes y así poder utilizar la información en las recomendaciones a los viajeros.
+
+```{r message= FALSE, warning=FALSE}
+# Movemo la categoría a predecir a la posicion 10.
+travelFactorDec <- travelFactorNo %>% select(1, 2, 3, 5,6,7,8,9,10,4)
+
+head(travelFactorDec)  
+```
+
+Preparamos los datos de entrenamiento.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Discretizamos todas las variables.
+cols<-c("artGalleries", "danceClubs", "juiceBars", "restaurants", "museums", "resorts", "parksAndpicnic", "beaches", "theaters", "religiousInstitutions")
+for (i in cols){
+  travelFactorDec[,i] <- as.factor(travelFactorDec[,i])
+}
+
+# Numero total de observaciones.
+n <- nrow(travelFactorDec)
+
+# Seleccionamos el 80%.
+nTrain <- round(0.80 * n) 
+
+# Creamos un vector con indices aleatorios.
+set.seed(123)
+trainIndices <- sample(1:n, nTrain)
+
+# Subset training.
+dataTrainX <- travelFactorDec[trainIndices, 1:9]  
+dataTrainY <- travelFactorDec[trainIndices, 10]   
+  
+# Subset testing.
+dataTestX <- travelFactorDec[-trainIndices, 1:9]  
+dataTestY <- travelFactorDec[-trainIndices, 10] 
+
+```
+
+No mostramos el modelo gráficamente por tener demasiadas variables. Aunque se puede ver igualmente en formato texto.
+```{r}
+# donde se pueden ver las reglas de decisión.
+model <- C50::C5.0(dataTrainX, dataTrainY)
+summary(model)
+
+#plot(model)
+```
+Vemos que este método clasifica erroneamente un 22.1% de las observaciones y también nos muestra las contribuciones de cada atributo en porcentaje "Attribute usage".
+
+```{r}
+
+# Reglas de decisión.
+model <- C50::C5.0(dataTrainX, dataTrainY, rules=TRUE)
+summary(model)
+
+```
+Este modelo nos ha generado 6 reglas de decisión.
+
+Las reglas encontradas predicen un valor para restaurantes de clase 1 y clase 2 que corresponden a *veryTerrible* y *terrible*. Esta informacion puede usarse para desaconsejar a los viajeros el comer en resaturantes durante el viaje o que las agencias de viajes puedan proponer alternativas para este perfil de viajeros.
+
+Observamos que a valoraciones muy positivas de religiousInstitutions y resort son un buen indicador para predecir que ese viajero valorará muy negativamente con *veryTerrible* o *terrible* los restaurantes.
+
+Rule 1: (12/3, lift 3.4)
+	resorts in {1, 2, 9}
+	religiousInstitutions in {8, 9, 10}
+	->  class 1  [0.714]
+
+### Validación del modelo
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+predicted_model <- predict( model, dataTestX, type="class" )
+print(sprintf("La precisión del árbol es: %.4f %%",100*sum(predicted_model == dataTestY) / length(predicted_model)))
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+if(!require(gmodels)){
+    install.packages('gmodels', repos='http://cran.us.r-project.org')
+    library(gmodels)
+}
+```
+
+Los valores que han tenido una predicción positiva se encuentran en la diagonal de la matriz. Por ejemplo para feedback 1, tiene unos valores de 17 sobre 24 para la predicción 1 (veryTerrible) y de 27 de un total the 172 para la predicción 2 (Terrible).
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+CrossTable(dataTestY, predicted_model,prop.chisq  = FALSE, prop.c = FALSE, prop.r =FALSE,dnn = c('Feedback', 'Prediction'))
+```
+
+### 5. Aplicar un modelo supervisado sobre el juego de datos habiendo aplicado previamente PCA/SVD. Hay que usar un árbol de decisión tras la aplicación de un PCA/SVD
+
+Entrenamos nuestro modelo utilizando observaciones aleatorias del dataset. En este caso vamos a utilizar el 80% de observaciones para entrenar el modelo y 20% para testearlo. El subconjuto de observaciones de testeo y entrenamiento lo guardamos en las variables correspondientes. Ahora teniendo en cuenta que utilizamos el conjunto de datos despues de haber aplicado PCA. Seleccionamos las 7 primeras componentes como ha sido demostrado en el análisis previo. Estas 7 componentes contienen el 90% de la información.
+
+```{r message= FALSE, warning=FALSE}
+# Seleccionamos las 7 componentes.
+travelFactorNo <- scoresPca
+travelFactorDec <- travelFactorNo %>% select(1, 2, 3,4,5,6,7)
+
+head(travelFactorDec)  
+```
+
+Preparamos los datos de entrenamiento.
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+# Discretizamos todas las variables.
+cols<-c("Comp.1", "Comp.2", "Comp.3", "Comp.4", "Comp.5", "Comp.6", "Comp.7")
+for (i in cols){
+  travelFactorDec[,i] <- as.factor(travelFactorDec[,i])
+}
+
+# Numero total de observaciones.
+n <- nrow(travelFactorDec)
+
+# Seleccionamos el 80%.
+nTrain <- round(0.80 * n) 
+
+# Creamos un vector con indices aleatorios.
+set.seed(123)
+trainIndices <- sample(1:n, nTrain)
+
+# Subset training.
+dataTrainX <- travelFactorDec[trainIndices, 1:6]  
+dataTrainY <- travelFactorDec[trainIndices, 7]   
+  
+# Subset testing.
+dataTestX <- travelFactorDec[-trainIndices, 1:6]  
+dataTestY <- travelFactorDec[-trainIndices, 7] 
+
+```
+
+Aplicamos el modelo a los datos.
+```{r}
+# donde se pueden ver las reglas de decisión.
+model <- C50::C5.0(dataTrainX, dataTrainY)
+#summary(model)
+#plot(model)
+```
+
+### Validación del modelo
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+predicted_model <- predict( model, dataTestX, type="class" )
+print(sprintf("La precisión del árbol es: %.4f %%",100*sum(predicted_model == dataTestY) / length(predicted_model)))
+```
+Vemos que la precisión del árbol ha disminuido considerablemente.
+
+### 6.¿Ha habido mejora en capacidad predictiva, tras aplicar PCA/SVD? ¿A qué crees que es debido?.
+
+Aplicando PCA al conjunto de datos obtenemos un nuevo espacio con la máxima varianza con respecto al conjunto de datos original. Debido a que PCA no es un método que utilize datos discretos los resultados no pueden producir un mejor resultado. El numero de reglas aumenta considerablemente al discretizar los valores del conjunto de datos obtenido de PCA. Además ya no se dispone de la informacion para interpretar la información a través de las reglas de decisión ya que pierdes la referencia de los atributos. En nuestro caso concreo sobre el estudio de la categoría restaurantes ya no puede ser evaluada. 
+
+
+## Recursos Básicos
+Material docente proporcionado por la UOC. 
+
+## Criterios de valoración
+
+**Ejercicios prácticos** 
+
+Para todas las PEC es necesario documentar en cada apartado del ejercicio práctico que se ha hecho y como se ha hecho.
+
+## Formato y fecha de entrega
+El formato de entrega es: usernameestudiante-PECn.html/doc/docx/odt/pdf  
+Se debe entregar la PEC en el buzón de entregas del aula  
+
+## Nota: Propiedad intelectual 
+
+> A menudo es inevitable, al producir una obra multimedia, hacer uso de recursos creados por terceras personas. Es por lo tanto comprensible hacerlo en el marco de una práctica de los estudios de Informática, Multimedia y Telecomunicación de la UOC, siempre y cuando esto se documente claramente y no suponga plagio en la práctica. 
+
+> Por lo tanto, al presentar una práctica que haga uso de recursos ajenos, se debe presentar junto con ella un documento en que se detallen todos ellos, especificando el nombre de cada recurso, su autor, el lugar donde se obtuvo y su estatus legal: si la obra esta protegida por el copyright o se acoge a alguna otra licencia de uso (Creative Commons, licencia GNU, GPL ...). 
+El estudiante deberá asegurarse de que la licencia no impide especificamente su uso en el marco de la práctica. En caso de no encontrar la información correspondiente tendrá que asumir que la obra esta protegida por copyright. 
+
+> Deberéis, además, adjuntar los ficheros originales cuando las obras utilizadas sean digitales, y su código fuente si corresponde.  
+
+******
+# Enunciado
+******
+Como continuación del estudio iniciado en la práctica 1, procedemos en esta práctica 2 a aplicar modelos analiticos sobe el juego de datos seleccionado y preparado en la práctica anterior.
+
+De este modo se pide al estudiante que complete los siguientes pasos:  
+
+1. Aplicar un modelo de generación de reglas a partir de **Reglas de asociación**.  
+
+2. Aplicar un modelo **no supervisado** y basado en el concepto de **distancia**, sobre el juego de datos.   
+
+3. Aplica de nuevo el modelo anterior, pero usando una **métrica distinta** y compara los resultados.
+
+4. Aplicar un **modelo supervisado** sobre el juego de datos **sin** haber aplicado previamente **PCA/SVD**.
+
+5. Aplicar un **modelo supervisado** sobre el juego de datos habiendo aplicado previamente **PCA/SVD**.
+
+6. ¿Ha habido mejora en capacidad predictiva, tras aplicar PCA/SVD? ¿A qué crees que es debido?.   
+
+
+******
+# Rúbrica
+******
+ 
+* 15%. Se generan reglas y se comentan e interpretan las más significativas. Evaluar la calidad del modelo generado con los indicadores que se consideren adecuados.
+* 15%. Se genera modelo no supervisado, se muestran y comentan medidas de calidad del modelo generado y se comentan las conclusiones as? como la descripci?n de los grupos obtenidos.
+* 20%. Se genera modelo no supervisado con métrica de distancia distinta al anterior. Se muestran y comentan medidas de calidad del modelo generado y se comentan las conclusiones as? como la descripci?n de los grupos obtenidos. Adicionalmente se comparan los dos modelos no supervisados con m?tricas de distancia distinta.
+* 15%. Se genera un modelo supervisado sin PCA/SVD previo, se muestran y comentan medidas de calidad del modelo generado y se comenta extensamente el conocimiento extra?do del modelo.
+* 15%. Se genera un modelo supervisado con PCA/SVD previo, se muestran y comentan medidas de calidad del modelo generado y se comenta extensamente el conocimiento extra?do del modelo. Se valorará la extracci?n de conocimiento del modelo generado.
+* 20%. Se compara la capacidad predictiva de los dos modelos supervisados y se comenta la diferencia de rendimiento en base al efecto PCA/SVD.
+
+
+
+
+
+
+
+
+
+
