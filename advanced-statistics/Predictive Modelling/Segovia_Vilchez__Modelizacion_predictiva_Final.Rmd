@@ -1,0 +1,568 @@
+---
+title: "A3 - Modelización predictiva"
+author: "Leonardo Segovia Vilchez"
+date: "Diciembre 2021"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '2'
+  word_document:
+    toc: yes
+    toc_depth: '2'
+  html_document:
+    highlight: default
+    number_sections: yes
+    theme: cosmo
+    toc: yes
+    toc_depth: 2
+---
+\newpage
+
+**Introducción**
+En esta actividad se usará el fichero de datos (dat_Air) que contiene información sobre diferentes parámetros sobre la calidad del aire de una determinada ciudad europea en el año 2021. Estos datos han sido medidos en tiempo real en diferentes estaciones distribuidas en distintas zonas. Para nuestro estudio se ha seleccionado los datos recopilados de este año por una de las estaciones móviles. Se muestran las medidas de una serie de variables, tanto meteorológicas como de los principales contaminantes del aire (gases y partículas).
+
+Todas ellas contribuyen para determinar el Índice de Calidad del Aire (ICA).
+
+Las variables del fichero de datos son:
+
+* Estacion: Estación móvil.
+* Latitud: Latitud del lugar de medición.
+* Longitud: Longitud del lugar de medición.
+* Fecha: Fecha de medición.
+* Periodo: Mediciones cada hora. Periodo de 1 a 24 horas (diarias).
+* SO2: Concentración de SO2 (dióxido de azfre) en m g /m 3 .
+* H2S: Concentración de H2s (ácido sulfhidrico) en m g /m 3 .
+* NO: Concentración de NO (óxido nítrico) en m g /m 3 .
+* NO2: Concentración de (dióxido de nitrógeno) en m g /m 3 .
+* NOX: Concentración de NOX (óxidos de nitrógeno) en m g /m 3 .
+* O3: Concentración de Ozono en m g /m 3 .
+* PM10: Partículas en suspension <10 en m g /m 3 .
+* PM25: Partíulas en Suspension PM 2,5 en m g /m 3 .
+* BEN: Concentración de benceno en m g /m 3 .
+* TOL: Tolueno en m g /m 3 .
+* MXIL: MXileno en m g /m 3 .
+* Dir_Aire: Dirección del viento en grados.
+* Vel: Velocidad del viento en m/Sg.
+* Tmp: Temperatura en grados centígrados.
+* HR: Humedad relativa en % de hr.
+* PRB: Presión Atmosférica en mb.
+* RS: Radiación Solar W /m 2 .
+* LL: Precipitación en l/m 2 .
+
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+# Librerias
+# Paquetes y librerías.
+#install.packages("car")
+#install.packages("corrplot")
+library(pROC)
+library(tibble)
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(knitr)
+library(tidyr)
+library(car)
+library(stringr)
+library(grid)
+library(gridExtra)
+library(nortest)
+library(BSDA)
+library(RColorBrewer)
+library(caret)
+library(corrplot)
+library(ResourceSelection)
+
+# Cargamos el fichero de datos.
+dat_Air <- read.csv('dat_Air.csv',stringsAsFactors = FALSE)
+
+# Mostramos si el dataset se ha cargado correctamente.
+head(dat_Air,2)
+```
+
+Examinamos la interpretación que hace R de cada una de las variables. 
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+# Ejecutamos la función *class* a cada variable del dataset
+sapply(dat_Air, class)
+```
+
+# Lectura del fichero y preparación de los datos
+
+Leed el fichero y guardad . A continuación, verificad que los datos se han cargado correctamente.
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+# Valores resumenes.
+str(dat_Air)
+```
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+# Valores resumenes.
+summary(dat_Air)
+```
+
+*Observamos que las siguientes variable contienen valores nulos: SO2, H2S, NO, NO2, NOX, O3, PM10, PM25, BEN, TOL y MXIL*
+
+*Imputamos los valores nulos con la mediana*
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+sel<-which(is.na(dat_Air$SO2))
+dat_Air[sel,"SO2"]<-median(dat_Air$SO2,na.rm = T)
+
+sel<-which(is.na(dat_Air$H2S))
+dat_Air[sel,"H2S"]<-median(dat_Air$H2S,na.rm = T)
+
+sel<-which(is.na(dat_Air$NO))
+dat_Air[sel,"NO"]<-median(dat_Air$NO,na.rm = T)
+
+sel<-which(is.na(dat_Air$NO2))
+dat_Air[sel,"NO2"]<-median(dat_Air$NO2,na.rm = T)
+
+sel<-which(is.na(dat_Air$O3))
+dat_Air[sel,"O3"]<-median(dat_Air$O3,na.rm = T)
+
+sel<-which(is.na(dat_Air$PM10))
+dat_Air[sel,"PM10"]<-median(dat_Air$PM10,na.rm = T)
+
+sel<-which(is.na(dat_Air$TOL))
+dat_Air[sel,"TOL"]<-median(dat_Air$TOL,na.rm = T)
+
+sel<-which(is.na(dat_Air$PM25))
+dat_Air[sel,"PM25"]<-median(dat_Air$PM25,na.rm = T)
+
+sel<-which(is.na(dat_Air$BEN))
+dat_Air[sel,"BEN"]<-median(dat_Air$BEN,na.rm = T)
+
+sel<-which(is.na(dat_Air$MXIL))
+dat_Air[sel,"MXIL"]<-median(dat_Air$MXIL,na.rm = T)
+
+sel<-which(is.na(dat_Air$NOX))
+dat_Air[sel,"NOX"]<-median(dat_Air$NOX,na.rm = T)
+```
+
+
+\newpage
+# Regresión lineal
+
+La calidad del aire ha sufrido cambios que afectan a nuestro modo de vida, por lo que resulta necesario estudiarlo. Para ello se toman medidas de la emisión de diferentes contaminantes y de factores metereológicos como por ejemplo el viento, la precipitación, radiación solar o la temperatura, con el fin de buscar relaciones entre dichas variables. 
+
+En este estudio se quiere demostrar la existencia de relación lineal entre los contaminantes atmosféricos y las variables metereológicas.
+
+
+## Estudio de correlación lineal
+
+Se pide calcularla matriz de correlación entre las variables siguientes: Contaminantes: O3, NO2 y PM10, junto con las variables metereológicas: Tmp, HR, RS, Vel y Dir.
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+index <- c('O3','NO2','PM10','Tmp','HR','RS','Vel','Dir_Aire')
+cor_dat_Air <- dat_Air[, index]
+head(cor_dat_Air,3)
+```
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+cor_dat_Air <- cor(cor_dat_Air, method='pearson')
+cor_dat_Air <- round(cor_dat_Air, digits=2)
+cor_dat_Air
+```
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+corrplot(cor_dat_Air)
+```
+
+* RS: Radiación Solar W /m 2.
+* NO2: Concentración de (dióxido de nitrógeno) en m g /m 3 .
+* O3: Concentración de Ozono en m g /m 3 .
+* PM10: Partículas en suspension <10 en m g /m 3.
+* Dir_Aire: Dirección del viento en grados.
+* Vel: Velocidad del viento en m/Sg.
+* Tmp: Temperatura en grados centígrados.
+* HR: Humedad relativa en % de hr.
+
+
+a) ¿Cual de los contaminantes atmosféricos citados anteriormente, tienen una mayor relación lineal con la RS? Interpretar las relaciones de dicho contaminante con la RS y también con el resto de variables metereológicas.
+
+*Podemos observar que la relación lineal más fuerte con la variable 'Radiación Solar' coresponde a variable de 'Concentración de Ozono', teniendo está una correlación positiva. Los dos contaminantes restantes, concentración de dióxido de nitrógeno y partículas en suspension tienen un coorelación inferior, aproximadamente la mitad, y negativa. Notamos también que la relacion RS <-> O3 es muy parecida a Tmp <-> O3.*
+
+*También podemos observar fenomenos más compresibles como la relación positiva de la radiación solar con la temperatura y la relación negativa respecto a la humedad. También es relevante la fuerte relación positiva entre el viento y la radiación solar / temperatura. Aunque cabe remarcar que la corelación no significa causalidad sino simplemente que las dos variables tienen una tendencia parecidad pudiendo ser está positiva o negativa*
+
+
+b) Se toma la media diaria de cada una de las variables del apartado a) y posteriormente se estudia de nuevo la relación pedida en dicho apartado. ¿Existe alguna diferencia en la relación entre las nuevas variables construídas con los valores medios diarios, con respecto a los resultados obtenidos anteriormente?
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+cor_dat_Air <- dat_Air %>% group_by(Fecha)
+
+cor_mean_dat_Air <- cor_dat_Air %>% summarise(
+  NO2 = mean(NO2),
+  O3 = mean(O3),
+  PM10 = mean(PM10),
+  Dir_Aire = mean(Dir_Aire),
+  RS = mean(RS),
+  Vel = mean(Vel),
+  Tmp = mean(Tmp),
+  HR = mean(HR)
+)
+
+head(cor_mean_dat_Air,3)
+```
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+index <- c('O3','NO2','PM10','Tmp','HR','RS','Vel','Dir_Aire')
+cor_mean_dat_Air <- cor_mean_dat_Air[, index]
+cor_mean_dat_Air <- cor(cor_mean_dat_Air, method='pearson')
+cor_mean_dat_Air <- round(cor_mean_dat_Air, digits=2)
+cor_mean_dat_Air
+```
+
+* NO2: Concentración de (dióxido de nitrógeno) en m g /m 3 .
+* O3: Concentración de Ozono en m g /m 3 .
+* PM10: Partículas en suspension <10 en m g /m 3 .
+
+*En este caso, utilizando la media, el valor con más coorelación varía con respecto a los datos por hora. La relación lineal más fuerte con la variable 'Radiación Solar' coresponde a variable de 'Concentración de (dióxido de nitrógeno)'.*
+*Otros valores que varían significativamente son las relaciones con la variable Humedad relativa que pasa del -0.40 a -0.05 y la Velocidad del viento del 0.54 al 0.25*
+
+*Se demuestra también de forma visual.*
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+corrplot(cor_mean_dat_Air)
+```
+
+\newpage
+## Modelo de regresión lineal
+
+Se quiere explicar el nivel de ozono en función de la radiación solar.
+
+a) Estimar por mínimos cuadrados ordinarios un modelo lineal que explique la variable O3 en función de la radiación solar (RS). Se evaluará la bondad del ajuste, a partir del coeficiente de determinación.
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+Model_lineal_O3_RS <- lm(O3~RS, data=dat_Air )
+summary(Model_lineal_O3_RS)
+```
+
+*El modelo de regresión es significativo (p-value: < 2.2e-16), con un R2 ajustado de 13.66%. RS explica el 13.66% de la variacion de O3. Es un modelo muy pobre*
+
+b) Para calcular el índice de calidad del aire, se establecen diferentes categorías, según sea la concentración de cada contaminante. En este apartado se tomará como contaminante la concentración de PM10 y se establecerán las siguientes categorías, para construir el PM10_cat (Indice de calidad del Aire, en función de PM10):
+
+* Muy buena: valores de (0 a 40],
+* Buena: valores de (40 a 60],
+* Mejorable: valores de (60 a 120],
+* Mala: valores de (120 a 160],
+* Muy mala: valores de (160 a 724]
+
+Se pide, construir un modelo de regresión lineal, tomando como variable dependiente (O3) y la variable explicativa PM10_cat. Interpretar los resultados.
+
+Nota: Este apartado se podría interpretar también mediante el ANOVA. Dicho modelo se verá en la actividad A4.
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+
+dat_Air$PM10_cat[(0  <= dat_Air$PM10)   & (dat_Air$PM10 < 40 )] <- 'Muy buena'
+dat_Air$PM10_cat[(40 <= dat_Air$PM10)   & (dat_Air$PM10 < 60 )] <- 'Buena'
+
+dat_Air$PM10_cat[(60  <= dat_Air$PM10)  & (dat_Air$PM10 < 120)] <- 'Mejorable'
+dat_Air$PM10_cat[(120  <= dat_Air$PM10) & (dat_Air$PM10 < 160)] <- 'Mala'
+dat_Air$PM10_cat[(160  <= dat_Air$PM10) & (dat_Air$PM10 < 724)] <- 'Muy mala'
+dat_Air$PM10_cat   <-as.factor(dat_Air$PM10_cat)
+
+Model_lineal_O3_PM10_cat <- lm(O3~factor(PM10_cat), data=dat_Air )
+summary(Model_lineal_O3_PM10_cat)
+```
+*O3: Concentración de Ozono en m g /m 3 .*
+*PM10: Partículas en suspension <10 en m g /m 3.*
+
+*Los residuos están bastante bien distribuidos sobre la mediana (cercana a cero) ya que 1Q y 3Q tienen valors parecidos.*
+
+*Primero observamos que todas las estimaciones contiene valores significations (p-value: < 2.2e-16). Esto quiere decir que la probabilidad de que el valor obtenido se deba al azar es aceptable.*
+
+*El fenomeno que se observa, es que el aumento en la mejora del Indice de calidad del Aire aumenta con una buena medida de partículas en suspension. Esto se ve claramente cuando las partículas en suspension es Muy buena. Sucede el efecto contrario para los escenarios de partículas en suspension inferiores, por el siguiente orden; Mejorable, Mala y Muy mala. Todos ellos con una relación negativa.* 
+
+\newpage
+## Modelo de regresión lineal múltiple
+
+Se quiere explicar el nivel de ozono en función de la radiación solar (RS),concentración de dióxido de nitrógeno (NO2), temperatura (Tmp) y dirección del aire (Dir_Aire).
+
+a) Primero, se añadirá al modelo del apartado a), la variable explicativa (Dir_Aire).¿El modelo ha mejorado?
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+Model_lineal_O3_RS_Dir_Aire <- lm(O3~RS+Dir_Aire, data=dat_Air )
+summary(Model_lineal_O3_RS_Dir_Aire)
+```
+
+*El modelo de regresión es significativo (p-value: < 2.2e-16) y ha mejorado pasando del R2 13.66% al 24.38%.*
+
+b) Posteriormente se añade al modelo anterior la variable (NO2). ¿Existe una mejora del modelo?
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+Model_lineal_O3_RS_Dir_Aire <- lm(O3~RS+Dir_Aire+NO2, data=dat_Air )
+summary(Model_lineal_O3_RS_Dir_Aire)
+```
+
+*El modelo de regresión es significativo (p-value: < 2.2e-16) y ha mejorado significativamente pasando del R2 24.38% al 57.88%.*
+
+c) Se toma la variable (Tmp) y se añade al modelo anterior. Se pide comprobar la presencia o no de colinealidad entre las variables (RS) y (Tmp). Podéis usar la librería (faraway) y estudiar el FIV (factor de inflación de la varianza). Según la conclusión obtenida, discutir si sería indicado o no añadir la variable (Tmp) al modelo. De ser afirmativa la respuesta, construye el modelo e interpreta el resultado.
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+Model_lineal_O3_RS_Dir_Aire_tmp<- lm(O3~RS+Dir_Aire+NO2+Tmp, data=dat_Air )
+summary(Model_lineal_O3_RS_Dir_Aire_tmp)
+```
+
+*El modelo de regresión es significativo (p-value: < 2.2e-16) y no ha mejorado con respecto al modelo anterior.*
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+vif(Model_lineal_O3_RS_Dir_Aire_tmp)
+```
+
+*Ningun valor supera el umbral de 5 que sería preocupante por la colinealidad. De todas maneras observamos que la variable Tmp contiene el valor más alto y no aporta nueva información al modelo (R2) por lo que podiamos excluirla del modelo final.*
+
+## Diagnosis del modelo
+
+Para la diagnosis se escoge el modelo construído en el apartado b) y se piden dos gráficos: uno con los valores ajustados frente a los residuos (que nos permitirá ver si la varianza es constante) y el gráfico normalmente(QQ plot).Interpretar los resultados.
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+layout(matrix(c(1,2,3,4),2,2))
+plot(Model_lineal_O3_RS_Dir_Aire)
+```
+
+*El estudio de los residuos nos permite extraer información acerca del cumplimiento de las suposiciones de modelización. De la gráfica Normal Q-Q obtenemos la siguien información; la mayoría de datos centrales siguen la distribución normal, detectando algunas observaciones extremas que se desbían. Por otro lado, el gráfico de residuos frente valores ajustados, muestra un patrón “aleatorio” de los residuos, excepto en los extremos. Por lo que aceptaremos el cumplimiento de las suposiciones.*
+
+
+## Predicción del modelo
+Según el modelo del apartado c), calcular la concentración de O3, si se tienen valores de RS de 180, NO2 de 15, Dir_Aire de 250 grados y Tmp de 20 grados centígrados.
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+predict_data <-data.frame(RS =180, NO2=15 ,Dir_Aire=250 ,Tmp=20)
+pre_Model_lineal_O3_RS_Dir_Aire_tmp<- predict(Model_lineal_O3_RS_Dir_Aire_tmp, predict_data ,interval = "confidence")
+
+pre_Model_lineal_O3_RS_Dir_Aire_tmp
+```
+
+*El 95% del intervalo de predición de la concentraciónn de O3 es de 36.98376 entre el intervalo de 37.66 como max y minimo de 36.30*
+
+\newpage
+# Regresión logística
+
+Se quiere estudiar la concentración de O3 del aire de una determinada ciudad. Primero se creará una nueva variable dicotómica llamada icO3 (índice de calidad del aire basado en O3). Se codificará de la siguiente manera:
+
+*buena: valores de (0 a 80],
+*mejorable: valores de (80 a 100]
+
+Posteriormente se recodificará como valor 0 la categoría ” buena”. En caso contrario se codificará con el valor 1.
+
+Nota: Dicho índice de calidad se ha recodificado conforme a nuestros datos.
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+dat_Air$icO3[(0  <= dat_Air$O3)  & (dat_Air$O3 < 80 )]    <- 0
+dat_Air$icO3[(80 <= dat_Air$O3) & (dat_Air$O3 <= 100 )]   <- 1
+dat_Air$icO3   <-as.factor(dat_Air$icO3)
+levels(dat_Air$icO3)
+levels(dat_Air$icO3) <- c('buena', 'mejorable')
+levels(dat_Air$icO3)
+```
+
+## Estudio de relaciones entre variables. Análisis crudo de posibles factores de riesgo
+
+a) Se visualiza la relación entre ic O3 y las variables independientes: RS, Vel y HR. Para ello se recodificaran las variables RS y Vel, dejando la variable cuantitativa HR, tal como está en la base de datos.
+
+Para comprobar si existe asociación entre las variable dependiente y cada una de las variables explicativas, se aplicará el test Chi-cuadrado de Pearson. Un resultado significativo nos dirá que existe asociación. Se procederán a categorizar las variables explicativas de la siguiente forma:
+
+Radiación solar (RS_cat2):
+* normal_baja:(0 a 100],
+* normal_alta: valores de (100 a 700]
+
+Velocidad del viento (Vel_cat2):
+* flojo: valores de (0 a 3],
+* moderado: valores de (3 a 10]
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+dat_Air$RS_cat2[(0  <= dat_Air$RS)  & (dat_Air$RS < 100 )]    <- 0
+dat_Air$RS_cat2[(100 <= dat_Air$RS) & (dat_Air$RS < 700 )]    <- 1
+dat_Air$RS_cat2   <-as.factor(dat_Air$RS_cat2)
+levels(dat_Air$RS_cat2)
+levels(dat_Air$RS_cat2) <- c('normal_baja', 'normal_alta')
+levels(dat_Air$RS_cat2)
+
+
+dat_Air$Vel_cat2[(0  <= dat_Air$Vel)  & (dat_Air$Vel < 3 )]    <- 0
+dat_Air$Vel_cat2[(3 <= dat_Air$Vel) & (dat_Air$Vel < 10 )]    <- 1
+dat_Air$Vel_cat2 <-as.factor(dat_Air$Vel_cat2)
+levels(dat_Air$Vel_cat2)
+levels(dat_Air$Vel_cat2) <- c('flojo', 'moderado')
+levels(dat_Air$Vel_cat2)
+```
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+model_icO3_RS_cat2 = glm(formula=icO3~RS_cat2, data=dat_Air, family=binomial (link=logit))
+model_icO3_Vel_cat2 = glm(formula=icO3~Vel_cat2, data=dat_Air, family=binomial (link=logit))
+model_icO3_HR = glm(formula=icO3~HR, data=dat_Air, family=binomial (link=logit))
+
+1-pchisq(sum(residuals(model_icO3_RS_cat2,type="pearson")^2),1)
+1-pchisq(sum(residuals(model_icO3_Vel_cat2,type="pearson")^2),1)
+1-pchisq(sum(residuals(model_icO3_HR,type="pearson")^2),1)
+```
+
+*Para todas se obtiene un resultado significativo. Por lo que se demuestra que existe asociación.*
+
+b) Posteriormente, para conocer el grado de dicha asociación, se calculará las OR (Odds-Ratio). Importante: Para el cálculo de las OR, se partirá de la tabla de contingencia y se calculará a partir de su fórmula. Debéis implementar dicha fórmula en R. Interpretar las OR calculadas.
+
+* O3: Concentración de Ozono en m g /m 3 .
+* RS: Radiación Solar W /m 2 .
+
+*Lo realizamos solo a las variables cuantitativas.*
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+table(dat_Air$icO3, dat_Air$RS_cat2)
+prop.table(table(dat_Air$icO3, dat_Air$RS_cat2))
+
+```
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+odds_normal_baja <-(0.623124330/0.009914255)
+odds_normal_alta <- (0.350348339/0.016613076)
+
+odds_normal_baja / odds_normal_alta
+```
+
+*Medida de O3 Buena respecto O3 Mala.*
+
+*La probabilidad de tener una medida O3 buena cuando RS_cat2 sea normal_baja, es de 2.98 veces mayor respecto al caso de RS_cat2 sea normal_alta.*
+
+* O3: Concentración de Ozono en m g /m 3 .
+* Vel: Velocidad del viento en m/Sg.
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+prop.table(table(dat_Air$icO3, dat_Air$Vel_cat2))
+```
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+odds_moderado <- (0.30091104/0.01339764)
+odds_flojo <- (0.67256163/0.01312969)
+
+odds_moderado/odds_flojo
+```
+
+*Medida de O3 Buena respecto O3 Mala.*
+
+*La probabilidad de tener una medida O3 buena cuando Vel_cat2 sea moderado, es de 0.43 veces respecto al caso de Vel_cat2 sea Flojo.*
+
+## Modelo de regresión logística
+
+a) Estimad el modelo de regresión logística tomando como variable dependiente icO3 y variable explicativa RS_cat2. Calculad la OR a partir de los resultados del modelo y su intervalo de confianza. ¿Se puede considerar que la radiación solar es un factor de riesgo? Justifica tu respuesta.
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+model_icO3_RS_cat2 <- glm(formula=icO3~RS_cat2, data=dat_Air, family=binomial (link=logit))
+summary(model_icO3_RS_cat2)
+```
+*El signo positivo del coeficiente hace indicar que una radiación normal alta hace disminuir la calidad del aire, por lo que aumentaria la etiqueta O3 Mejoreable.*
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+exp(cbind(coef(model_icO3_RS_cat2),confint(model_icO3_RS_cat2)))
+```
+*La occurrencia de que la calidad del aire empeore (o sea que la etiqueta normal_alta aumente) es de 2.98 veces mayor en relación cuando RS_cat es normal_baja*
+
+*Por lo que considero RS de factor de riesgo.*
+
+b) Se crea un nuevo modelo con la misma variable dependiente y se añade al apartado a) la variable TMP. Interpretar si nos encontramos o no ante una posible variable de confusión. 
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+model_icO3_RS_cat2_Tmp <- glm(formula=icO3~RS_cat2+Tmp, data=dat_Air, family=binomial (link=logit))
+summary(model_icO3_RS_cat2_Tmp)
+```
+
+*EL valor del coeficiente del RS_cat2normal_alta cambia significativamente al introducir el la nueva variable Tmp. Ademá, podemos ver que Tmp esta relacionada con la variable dependiente y la independiente RS_cat2. Veasé abajo los coeficientes cernanos a cero.*
+
+*Por lo que estaíamos ante una posible variable de confusión.*
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+model_icO3_Tmp <- glm(formula=icO3~Tmp, data=dat_Air, family=binomial (link=logit))
+model_icO3_Tmp
+model_RS_cat2_Tmp <- glm(formula=RS_cat2~Tmp, data=dat_Air, family=binomial (link=logit))
+model_RS_cat2_Tmp
+```
+
+c) Se añade al modelo del apartado a) la variable HR. Estudiar la existencia o no de interacción entre las variables explicativas RS_cat2 y HR. Interpretar.
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+model_icO3_RS_cat2_HR <- glm(formula=icO3~RS_cat2+HR+RS_cat2:HR, data=dat_Air, family=binomial)
+summary(model_icO3_RS_cat2_HR)
+```
+
+*RS_cat2normal_alta:HR es estadísticamente significativo.También, observamos que la esimación cambia muy significativamente. En este caso no podemos saber si existe interacción o no, porque este cambio es algo normal para interaciones de variables continuas. Por lo que representamos el logit del modelo.*
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+model_icO3_RS_cat2_HR <- glm(formula=icO3~RS_cat2+HR, data=dat_Air, family=binomial)
+pred6=predict(model_icO3_RS_cat2_HR,type="link")
+plot(dat_Air$HR,pred6,type="n",main="NO interaccion")
+
+points(dat_Air$HR[dat_Air$RS_cat2=='normal_baja'],pred6[dat_Air$RS_cat2=='normal_baja'],col=2)
+points(dat_Air$HR[dat_Air$RS_cat2=='normal_alta'],pred6[dat_Air$RS_cat2=='normal_alta'],col=4)
+```
+
+*Se tiene que las rectas son paralelas para cada nivel del factor; normal_baja y normal_alta, por lo que la asociación entre O3 y RS_cat2 no varía por la HR, es decir, dicha variable no modifica el efecto del factor RS_cat2, por lo tanto, no existe interacción.*
+
+d) Se crea un nuevo modelo con las variables explicativas RS_cat2 y Dir_Aire. ¿Existe una mejora del modelo?
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+model_icO3_RS_cat2_Dir_Aire <- glm(formula=icO3~RS_cat2+Dir_Aire, data=dat_Air, family=binomial (link=logit))
+summary(model_icO3_RS_cat2_Dir_Aire)
+```
+
+*Según el criterio de información de Akaike, esté modelo ajusta mejor los datos. Pasa de un valor AIC: 1775.9 a AIC: 1666.9.*
+
+## Predicción
+
+Según el modelo del apartado d), calculad la probabilidad de que la concentración de O3 sea o no superior a 80, con unos valores de RS_cat2=“Normal_alta”y Dir_Aire=40.
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+pre_data_d<-data.frame(RS_cat2='normal_alta', Dir_Aire=c(40))
+predict(model_icO3_RS_cat2_Dir_Aire,pre_data_d ,type="response")
+```
+
+*Tendría una probabilidad de 0.083 de O3 ser Mejorable y 1-0.083 de ser Bueno.*
+
+## Bondad del ajuste
+
+Usa el test de Hosman-Lemeshow para ver la bondad de ajuste, tomando el modelo del apartado d). En la librería ResourceSelection hay una función que ajusta el test de Hosmer-Lemeshow.
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+hoslem.test(dat_Air$icO3,fitted(model_icO3_RS_cat2_Dir_Aire))
+```
+
+*Rechazamos la hipótesis nula (H0). El modelo no ajusta bien los datos*
+
+## Curva ROC
+
+Dibujar la curva ROC, y calcular el área debajo de la curva con el modelo del apartado d). Discutir el resultado.
+
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+prob=predict(model_icO3_RS_cat2_Dir_Aire, dat_Air, type="response")
+r=roc(dat_Air$icO3, prob, data=dat_Air)
+## Setting levels: control = 0, case = 1
+## Setting direction: controls < cases
+plot (r)
+```
+```{r,eval=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+auc(r)
+```
+
+*Podemos decir que el modelo discrimina de manera adecuada ya que auc se encuentra entre 0.6 y 0.8.*
+
+# Conclusiones del análisis
+
+En este apartado se deberán exponer las conclusiones en base a los resultados obtenidos en todo el estudio.
+
+
+**Regresión lineal simple**
+*El contaminantes atmosférico 'Concentración de Ozono' tiene una relación lineal fuerte con la variable 'Radiación Solar' siendo esta relación positiva.*
+*Pero utilizando la media diaria de las medidas, el valor con más coorelación varía con respecto a los datos por hora. La relación lineal más fuerte con la variable 'Radiación Solar' coresponde a variable de 'Concentración de (dióxido de nitrógeno)'. *
+
+*La explicación del nivel de ozono en función de la radiación solar genera un modelo lineal pobre en el que solo 13.66% de la variacion queda explicada por O3. Además, el estudio de la calidad del aire demuestra que, la mejora del Indice de calidad del Aire aumenta con una buena medida de partículas en suspension. Esto se ve claramente cuando las partículas en suspension tiene la eqiqueta de Muy buena. Sucede el efecto contrario para los escenarios de partículas en suspension inferiores, por el siguiente orden; Mejorable, Mala y Muy mala.*
+
+**Regresión lineal multiple:**
+*Observamos una mejora significativa del modelo anterior al añadir nuevas variables como son :Dir_Aire y NO2. Pasando del R2 13.66% al 57.88%. Se descarta la variable Tmp ya que no hace mejorar el modelo original.*
+
+**Regresion logistica:**
+*2.1 La ocurrencia de que la calidad del aire empeora es de 2.98 veces mayor en relación cuando RS_cat es normal_baja, por lo que consideramos RS de factor de riesgo.*
+
+*2.2 Observamos la Tmp como una variable de confusion ya esta relacionada con la variable dependiente y la independiente.*
+
+*2.3 No observamos una interacción entre RS_cat2 y HR.*
+
+*2.4 Vemos una merora del modelo añdiendo las variables explicativas RS_cat2 y Dir_Aire. ya que según el criterio de información de Akaike, esté modelo ajusta mejor los datos. Pasa de un valor AIC: 1775.9 a AIC: 1666.9.*
+
+
+******
+
+******
